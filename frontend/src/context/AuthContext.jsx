@@ -55,6 +55,16 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     const res = await API.post('/auth/register', { name, email, password });
+    if (res.data.success && res.data.token) {
+      localStorage.setItem('learnova_token', res.data.token);
+      localStorage.setItem('learnova_user', JSON.stringify(res.data.user));
+      setUser(res.data.user);
+    }
+    return res.data;
+  };
+
+  const verifyEmail = async (email, code) => {
+    const res = await API.post('/auth/verify-email', { email, code });
     if (res.data.success) {
       localStorage.setItem('learnova_token', res.data.token);
       localStorage.setItem('learnova_user', JSON.stringify(res.data.user));
@@ -75,7 +85,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, adminLogin, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, adminLogin, register, verifyEmail, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

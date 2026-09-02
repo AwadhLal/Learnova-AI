@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import { generateToken } from '../utils/jwt.js';
-import { sendEmail, getWelcomeEmailTemplate } from '../services/emailService.js';
+import { sendEmail, getWelcomeEmailTemplate, getVerificationEmailTemplate, getPasswordResetEmailTemplate, getPasswordResetConfirmationTemplate } from '../services/emailService.js';
 import { uploadToCloudinary } from '../services/cloudinaryService.js';
 import crypto from 'crypto';
 
@@ -14,28 +14,88 @@ export const register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'Email is already registered' });
+    let user = await User.findOne({ email });
+    
+    if (user) {
+      if (user.isVerified) {
+        return res.status(400).json({ success: false, message: 'Email is already registered' });
+      } else {
+        // Update existing unverified user
+        user.name = name;
+        user.password = password;
+      }
+    } else {
+      user = new User({
+        name,
+        email,
+        password,
+        role: 'student',
+        isVerified: false
+      });
     }
 
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: 'student',
+    if (user.lastVerificationCodeSentAt && Date.now() - user.lastVerificationCodeSentAt < 60000) {
+      return res.status(400).json({ success: false, message: 'Please wait 60 seconds before requesting a new code' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationCode = code;
+    user.verificationCodeExpires = Date.now() + 5 * 60 * 1000;
+    user.verificationAttempts = 0;
+    user.lastVerificationCodeSentAt = Date.now();
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Learnova AI - Verification Code',
+      html: getVerificationEmailTemplate(user.name, code),
     });
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent to email',
+      isUnverified: true
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Verify Email
+// @route POST /api/auth/verify-email
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
+    if (user.isVerified) return res.status(400).json({ success: false, message: 'Email is already verified' });
+    
+    if (user.verificationAttempts >= 5) {
+      return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    if (!user.verificationCode || user.verificationCode !== code || user.verificationCodeExpires < Date.now()) {
+      user.verificationAttempts += 1;
+      await user.save();
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification code' });
+    }
+
+    user.isVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
+    user.verificationAttempts = 0;
+    await user.save();
 
     const token = generateToken(user._id);
 
-    // Send Welcome Email asynchronously
     sendEmail({
       to: user.email,
       subject: 'Welcome to Learnova AI! 🚀',
       html: getWelcomeEmailTemplate(user.name),
     }).catch(err => console.error('Welcome email error:', err.message));
 
-    res.status(201).json({
+    res.json({
       success: true,
       token,
       user: {
@@ -47,6 +107,39 @@ export const register = async (req, res, next) => {
         streak: user.streak,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Resend Verification Email
+// @route POST /api/auth/resend-verification
+export const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
+    if (user.isVerified) return res.status(400).json({ success: false, message: 'Email is already verified' });
+    
+    if (user.lastVerificationCodeSentAt && Date.now() - user.lastVerificationCodeSentAt < 60000) {
+      return res.status(400).json({ success: false, message: 'Please wait 60 seconds before requesting a new code' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationCode = code;
+    user.verificationCodeExpires = Date.now() + 5 * 60 * 1000;
+    user.verificationAttempts = 0;
+    user.lastVerificationCodeSentAt = Date.now();
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Learnova AI - Verification Code',
+      html: getVerificationEmailTemplate(user.name, code),
+    });
+
+    res.json({ success: true, message: 'Verification code resent' });
   } catch (error) {
     next(error);
   }
@@ -68,7 +161,7 @@ export const login = async (req, res, next) => {
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({ success: false, message: 'Your account has been deactivated by an administrator.' });
+      return res.status(403).json({ success: false, isUnverified: true, message: 'Please verify your email before logging in.' });
     }
 
     // Update streak / last login date
@@ -194,46 +287,91 @@ export const forgotPassword = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'No user found with that email' });
     }
 
-    const resetToken = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 mins
+    if (user.lastResetCodeSentAt && Date.now() - user.lastResetCodeSentAt < 60000) {
+      return res.status(400).json({ success: false, message: 'Please wait 60 seconds before requesting a new code' });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordCode = code;
+    user.resetPasswordCodeExpires = Date.now() + 5 * 60 * 1000;
+    user.resetPasswordAttempts = 0;
+    user.lastResetCodeSentAt = Date.now();
 
     await user.save();
 
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
-
     await sendEmail({
       to: user.email,
-      subject: 'Learnova AI Password Reset Token',
-      html: `<p>You requested a password reset. Click here to reset your password: <a href="${resetUrl}">${resetUrl}</a></p>`,
+      subject: 'Learnova AI - Password Reset Code',
+      html: getPasswordResetEmailTemplate(user.name, code),
     });
 
-    res.json({ success: true, message: 'Password reset email sent' });
+    res.json({ success: true, message: 'Password reset code sent to email' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Verify Reset Code
+// @route POST /api/auth/verify-reset-code
+export const verifyResetCode = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
+    
+    if (user.resetPasswordAttempts >= 5) {
+      return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    if (!user.resetPasswordCode || user.resetPasswordCode !== code || user.resetPasswordCodeExpires < Date.now()) {
+      user.resetPasswordAttempts += 1;
+      await user.save();
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
+    }
+
+    res.json({ success: true, message: 'Code verified successfully' });
   } catch (error) {
     next(error);
   }
 };
 
 // @desc Reset password
-// @route POST /api/auth/reset-password/:token
+// @route POST /api/auth/reset-password
 export const resetPassword = async (req, res, next) => {
   try {
-    const resetPasswordToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const { email, code, password } = req.body;
+    const user = await User.findOne({ email });
 
-    const user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    if (!user) return res.status(400).json({ success: false, message: 'User not found' });
 
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    if (user.resetPasswordAttempts >= 5) {
+      return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' });
     }
 
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    if (!user.resetPasswordCode || user.resetPasswordCode !== code || user.resetPasswordCodeExpires < Date.now()) {
+      user.resetPasswordAttempts += 1;
+      await user.save();
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
+    }
+
+    user.password = password;
+    user.resetPasswordCode = undefined;
+    user.resetPasswordCodeExpires = undefined;
+    user.resetPasswordAttempts = 0;
+    
+    // Auto verify if they reset password
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
 
     await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Learnova AI - Password Updated',
+      html: getPasswordResetConfirmationTemplate(user.name),
+    });
 
     res.json({ success: true, message: 'Password reset successful' });
   } catch (error) {

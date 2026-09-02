@@ -8,9 +8,23 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  
+  const handleResendVerification = async () => {
+    try {
+      // Just import API here or use fetch directly
+      const { default: API } = await import('../services/api');
+      await API.post('/auth/resend-verification', { email: unverifiedEmail });
+      addToast('Verification code resent successfully.', 'success');
+      // Redirect to register page to verify? Or just tell them to use the code.
+      navigate('/register');
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to resend code', 'error');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +38,12 @@ const Login = () => {
         navigate('/dashboard');
       }
     } catch (err) {
-      addToast(err.response?.data?.message || 'Login failed', 'error');
+      if (err.response?.data?.isUnverified) {
+        setUnverifiedEmail(email);
+        addToast('Please verify your email before logging in.', 'error');
+      } else {
+        addToast(err.response?.data?.message || 'Login failed', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -83,6 +102,15 @@ const Login = () => {
             {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        {unverifiedEmail && (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center space-y-2">
+            <p className="text-xs text-rose-400">Your email is not verified.</p>
+            <button onClick={handleResendVerification} className="text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 px-4 py-2 rounded-lg transition-colors">
+              Resend Verification Code
+            </button>
+          </div>
+        )}
 
         <div className="pt-4 border-t border-slate-800 text-center space-y-2 text-xs text-slate-400">
           <p>

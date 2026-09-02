@@ -19,15 +19,7 @@ let cachedWorkingModel = null;
 
 // Preferred text models
 const PRIORITY_TEXT_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-3.5-flash',
-  'gemini-3.6-flash',
-  'gemini-3.7-flash',
-  'gemini-flash-latest',
-  'gemini-pro-latest',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-2.5-flash'
 ];
 
 /**
@@ -125,7 +117,7 @@ const generateContentWithFallback = async (prompt) => {
  */
 export const testGeminiConnection = async () => {
   const apiKey = getAPIKey();
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   console.log('🤖 Gemini AI Environment Status:');
   console.log(`- Gemini API key configured: ${apiKey ? 'YES' : 'NO'}`);
