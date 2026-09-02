@@ -31,7 +31,7 @@
 * **Frontend**: React 18, Vite, Tailwind CSS (Glassmorphism design system), Lucide Icons, Chart.js, Axios.
 * **Backend**: Node.js, Express.js, Mongoose (MongoDB ORM), JSON Web Tokens (`jsonwebtoken`), `bcryptjs`, `multer`, `helmet`, `cors`, `express-rate-limit`.
 * **Services & Integrations**:
-  * **AI Service**: Google Gemini AI (`@google/generative-ai`)
+  * **AI Service**: Google Gemini AI (`@google/genai`) using `gemini-2.5-flash` (with exponential backoff for 503 capacity limits)
   * **Payments**: Razorpay Gateway SDK
   * **Media Storage**: Cloudinary SDK (`multer` memory storage)
   * **Transactional Emails**: Nodemailer (SMTP)
@@ -73,7 +73,7 @@ Learnova AI/
 * **MongoDB**: Local MongoDB instance or MongoDB Atlas cluster URI
 * **Razorpay Test Account**: Key ID & Key Secret
 * **Cloudinary Account**: Cloud Name, API Key, API Secret
-* **Google Gemini API Key**: `AI_API_KEY`
+* **Google Gemini API Key**: `GEMINI_API_KEY`
 
 ---
 
@@ -112,7 +112,7 @@ RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
 # Google Gemini AI
-AI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 Start the backend server:

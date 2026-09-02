@@ -219,7 +219,7 @@ export const healthCheckAIController = async (req, res, next) => {
     res.json({
       success: true,
       message: 'Gemini AI integration is fully functional across all platform features!',
-      activeModel: 'gemini-3.6-flash',
+      activeModel: 'gemini-2.5-flash',
       testResponse: tutorReply.substring(0, 100) + '...',
     });
   } catch (error) {
