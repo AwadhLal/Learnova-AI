@@ -278,3 +278,100 @@ export const addLesson = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc Update Module
+// @route PUT /api/courses/modules/:moduleId
+export const updateModule = async (req, res, next) => {
+  try {
+    const { title, description } = req.body;
+    const module = await Module.findByIdAndUpdate(req.params.moduleId, { title, description }, { new: true, runValidators: true });
+    if (!module) return res.status(404).json({ success: false, message: 'Module not found' });
+    res.json({ success: true, module });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Delete Module and its Lessons
+// @route DELETE /api/courses/modules/:moduleId
+export const deleteModule = async (req, res, next) => {
+  try {
+    const module = await Module.findById(req.params.moduleId);
+    if (!module) return res.status(404).json({ success: false, message: 'Module not found' });
+    await Lesson.deleteMany({ module: module._id });
+    await Module.findByIdAndDelete(module._id);
+    res.json({ success: true, message: 'Module deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Reorder Modules
+// @route PUT /api/courses/:id/modules/reorder
+export const reorderModules = async (req, res, next) => {
+  try {
+    const { modules } = req.body; // Array of { id, order }
+    if (modules && modules.length > 0) {
+      await Promise.all(modules.map(mod => Module.findByIdAndUpdate(mod.id, { order: mod.order })));
+    }
+    res.json({ success: true, message: 'Modules reordered' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Update Lesson
+// @route PUT /api/courses/lessons/:lessonId
+export const updateLesson = async (req, res, next) => {
+  try {
+    const { title, type, content, videoUrl, durationMinutes, resources } = req.body;
+    const lesson = await Lesson.findByIdAndUpdate(
+      req.params.lessonId,
+      { title, type, content, videoUrl, durationMinutes: Number(durationMinutes) || 10, resources },
+      { new: true, runValidators: true }
+    );
+    if (!lesson) return res.status(404).json({ success: false, message: 'Lesson not found' });
+    res.json({ success: true, lesson });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Delete Lesson
+// @route DELETE /api/courses/lessons/:lessonId
+export const deleteLesson = async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findByIdAndDelete(req.params.lessonId);
+    if (!lesson) return res.status(404).json({ success: false, message: 'Lesson not found' });
+    res.json({ success: true, message: 'Lesson deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Reorder Lessons
+// @route PUT /api/courses/modules/:moduleId/lessons/reorder
+export const reorderLessons = async (req, res, next) => {
+  try {
+    const { lessons } = req.body; // Array of { id, order }
+    if (lessons && lessons.length > 0) {
+      await Promise.all(lessons.map(less => Lesson.findByIdAndUpdate(less.id, { order: less.order })));
+    }
+    res.json({ success: true, message: 'Lessons reordered' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Upload Video for Lesson
+// @route POST /api/courses/upload-video
+export const uploadVideo = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file provided' });
+    const videoUrl = await uploadToCloudinary(req.file.buffer, 'course_videos');
+    res.json({ success: true, videoUrl });
+  } catch (error) {
+    console.error('Video upload error:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload video' });
+  }
+};

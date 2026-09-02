@@ -22,6 +22,7 @@ import AdminCourseManager from './pages/admin/AdminCourseManager';
 import AdminStudentManager from './pages/admin/AdminStudentManager';
 import AdminPaymentLogs from './pages/admin/AdminPaymentLogs';
 import AdminAITools from './pages/admin/AdminAITools';
+import AdminCurriculumManager from './pages/admin/AdminCurriculumManager';
 
 import { useAuth } from './context/AuthContext';
 
@@ -71,6 +72,7 @@ function App() {
           {/* Admin Protected Routes */}
           <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/courses" element={<AdminRoute><AdminCourseManager /></AdminRoute>} />
+          <Route path="/admin/courses/:courseId/curriculum" element={<AdminRoute><AdminCurriculumManager /></AdminRoute>} />
           <Route path="/admin/students" element={<AdminRoute><AdminStudentManager /></AdminRoute>} />
           <Route path="/admin/payments" element={<AdminRoute><AdminPaymentLogs /></AdminRoute>} />
           <Route path="/admin/ai-tools" element={<AdminRoute><AdminAITools /></AdminRoute>} />

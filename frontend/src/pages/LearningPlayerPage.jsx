@@ -65,7 +65,7 @@ const LearningPlayerPage = () => {
 
         if (courseRes.data.success) {
           setCourse(courseRes.data.course);
-          const mods = courseRes.data.modules || [];
+          const mods = courseRes.data.course.modules || [];
           setModules(mods);
 
           if (mods.length > 0 && mods[0].lessons && mods[0].lessons.length > 0) {

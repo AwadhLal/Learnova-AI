@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Plus, Edit3, Trash2, BookOpen, Layers, Play, Upload, X, Shield, Star, Check, FolderPlus, Tag } from 'lucide-react';
@@ -8,6 +9,7 @@ const AdminCourseManager = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // Modals
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -308,12 +310,9 @@ const AdminCourseManager = () => {
                     <td className="p-4 text-slate-300">{c.enrolledStudentsCount || 0} enrolled</td>
                     <td className="p-4 text-right space-x-2">
                       <button
-                        onClick={() => {
-                          setSelectedCourseForModules(c);
-                          setModuleModalOpen(true);
-                        }}
+                        onClick={() => navigate(`/admin/courses/${c._id}/curriculum`)}
                         className="p-2 rounded-lg bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white transition-colors"
-                        title="Add Modules / Lessons"
+                        title="Manage Curriculum"
                       >
                         <Layers className="w-4 h-4" />
                       </button>

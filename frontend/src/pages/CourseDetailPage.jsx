@@ -29,6 +29,7 @@ const CourseDetailPage = () => {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [progress, setProgress] = useState(null);
 
   // Review Form state
   const [userRating, setUserRating] = useState(5);
@@ -40,11 +41,23 @@ const CourseDetailPage = () => {
         const res = await API.get(`/courses/${idOrSlug}`);
         if (res.data.success) {
           setCourse(res.data.course);
-          setModules(res.data.modules || []);
+          setModules(res.data.course.modules || []);
 
           if (user) {
             const enRes = await API.get(`/enrollments/check/${res.data.course._id}`);
-            if (enRes.data.success) setIsEnrolled(enRes.data.isEnrolled);
+            if (enRes.data.success) {
+              setIsEnrolled(enRes.data.isEnrolled);
+              if (enRes.data.isEnrolled) {
+                try {
+                  const progRes = await API.get(`/learning/progress/${res.data.course._id}`);
+                  if (progRes.data.success) {
+                    setProgress(progRes.data.progress);
+                  }
+                } catch (e) {
+                  console.warn('Progress fetch error');
+                }
+              }
+            }
           }
 
           // Fetch reviews
@@ -243,11 +256,29 @@ const CourseDetailPage = () => {
             {isEnrolled ? (
               <>Go to Course Player <Play className="w-4 h-4 fill-white" /></>
             ) : paymentProcessing ? (
-              'Opening Razorpay Test Modal...'
+              'Opening Checkout...'
             ) : (
               <>Enroll Now (Razorpay Test Mode) <ShieldCheck className="w-4 h-4" /></>
             )}
           </button>
+          
+          {isEnrolled && progress && (
+            <div className="pt-2 border-t border-slate-800 space-y-2">
+              <div className="flex justify-between text-xs text-slate-300 font-bold">
+                <span>Course Progress</span>
+                <span className="text-emerald-400">{progress.percentage || 0}% Complete</span>
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div 
+                  className="bg-emerald-500 h-2 rounded-full transition-all duration-500" 
+                  style={{ width: `${progress.percentage || 0}%` }}
+                ></div>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center">
+                {progress.completedLessons?.length || 0} lessons completed
+              </p>
+            </div>
+          )}
 
           <p className="text-[11px] text-center text-slate-400">
             💳 Test Mode Enabled • 30-Day Money-Back Guarantee
@@ -266,19 +297,30 @@ const CourseDetailPage = () => {
             <div key={mod._id} className="glass-panel rounded-2xl p-5 border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-white">{mod.title}</h3>
-                <span className="text-xs text-slate-400 font-semibold">{mod.lessons ? mod.lessons.length : 0} Lessons</span>
+                <div className="text-right">
+                  <span className="text-xs text-slate-400 font-semibold block">{mod.lessons ? mod.lessons.length : 0} Lessons</span>
+                  {isEnrolled && progress && (
+                    <span className="text-[10px] text-emerald-400">
+                      {mod.lessons?.filter(l => progress.completedLessons?.includes(l._id)).length || 0} / {mod.lessons?.length || 0} completed
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-slate-400">{mod.description}</p>
+              {mod.description && <p className="text-xs text-slate-400">{mod.description}</p>}
 
               <div className="space-y-2 pt-2 border-t border-slate-800/80">
-                {(mod.lessons || []).map((les) => (
-                  <div key={les._id} className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-slate-300 font-medium flex items-center gap-2">
-                      <Play className="w-3.5 h-3.5 text-indigo-400" /> {les.title}
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-semibold">{les.durationMinutes || 15} mins</span>
-                  </div>
-                ))}
+                {(mod.lessons || []).map((les) => {
+                  const isCompleted = progress?.completedLessons?.includes(les._id);
+                  return (
+                    <div key={les._id} className={`flex items-center justify-between text-xs p-2.5 rounded-xl border ${isCompleted ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-slate-900/60 border-slate-800'}`}>
+                      <span className={`font-medium flex items-center gap-2 ${isCompleted ? 'text-emerald-300' : 'text-slate-300'}`}>
+                        {isCompleted ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Play className="w-3.5 h-3.5 text-indigo-400" />} 
+                        {les.title}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-semibold">{les.durationMinutes || 10} mins</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
