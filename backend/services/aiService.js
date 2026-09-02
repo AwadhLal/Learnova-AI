@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 // Central API Key resolution
 const getAPIKey = () => {
@@ -10,7 +10,7 @@ const getAPIKey = () => {
 const getAIClient = () => {
   const apiKey = getAPIKey();
   if (apiKey) {
-    return new GoogleGenerativeAI(apiKey);
+    return new GoogleGenAI({ apiKey });
   }
   return null;
 };
@@ -31,9 +31,11 @@ const generateContentStrict = async (prompt) => {
   const modelName = process.env.GEMINI_MODEL?.trim() || PRIMARY_MODEL;
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
-    const result = await model.generateContent(prompt);
-    return { result, modelName };
+    const response = await genAI.models.generateContent({
+      model: modelName,
+      contents: prompt
+    });
+    return { result: response, modelName };
   } catch (err) {
     const safeError = err.message || err.toString();
     console.error(`⚠️ [Gemini AI] Model "${modelName}" failed. HTTP Status/Error:`, safeError.substring(0, 200));
@@ -59,7 +61,7 @@ export const testGeminiConnection = async () => {
 
   try {
     const { result, modelName } = await generateContentStrict('Respond with only the single word "ONLINE" to confirm API connectivity.');
-    const responseText = (await result.response.text()).trim();
+    const responseText = result.text.trim();
     console.log(`🎉 ✅ Gemini AI Connected Successfully! Active Working Model: "${modelName}" | Status: "${responseText}"`);
     return { success: true, modelName, response: responseText };
   } catch (err) {
@@ -95,8 +97,7 @@ Instruction Mode: ${mode}
   
   try {
     const { result } = await generateContentStrict(prompt);
-    const response = await result.response;
-    return response.text();
+    return result.text;
   } catch (err) {
     console.error('Ask AI Tutor Error:', err.message);
     throw new Error(`Gemini AI Error: ${err.message}`);
@@ -127,7 +128,7 @@ Return ONLY valid JSON array with this exact structure:
 
   try {
     const { result } = await generateContentStrict(prompt);
-    const responseText = await result.response.text();
+    const responseText = result.text;
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -147,7 +148,7 @@ Return ONLY valid JSON array of objects: [{ "day": 1, "title": "...", "tasks": [
 
   try {
     const { result } = await generateContentStrict(prompt);
-    const responseText = await result.response.text();
+    const responseText = result.text;
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -167,7 +168,7 @@ Return ONLY valid JSON object: { "summary": "...", "keyPoints": ["..."], "flashc
 
   try {
     const { result } = await generateContentStrict(prompt);
-    const responseText = await result.response.text();
+    const responseText = result.text;
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
     if (parsed.summary) return parsed;
@@ -187,7 +188,7 @@ Return ONLY valid JSON object: { "description": "...", "learningObjectives": [".
 
   try {
     const { result } = await generateContentStrict(prompt);
-    const responseText = await result.response.text();
+    const responseText = result.text;
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
     if (parsed.description) return parsed;
