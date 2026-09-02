@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import connectDB from './config/db.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 import { testCloudinaryConnection } from './services/cloudinaryService.js';
+import { testGeminiConnection } from './services/aiService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
@@ -22,8 +23,9 @@ import reviewRoutes from './routes/reviewRoutes.js';
 // Connect to MongoDB
 connectDB();
 
-// Run safe Cloudinary diagnostic ping on boot
+// Run safe Cloudinary & Gemini diagnostic checks on boot
 testCloudinaryConnection();
+testGeminiConnection();
 
 const app = express();
 

@@ -7,11 +7,13 @@ import {
   summarizeLessonController,
   getRecommendationsController,
   adminGenerateContentController,
+  healthCheckAIController,
 } from '../controllers/aiController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/health-check', healthCheckAIController);
 router.post('/tutor', protect, askTutorController);
 router.post('/generate-quiz', protect, generateQuizController);
 router.post('/study-plan', protect, generateStudyPlanController);

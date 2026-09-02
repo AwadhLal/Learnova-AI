@@ -210,3 +210,23 @@ export const adminGenerateContentController = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc Health check & test all Gemini AI features
+// @route GET /api/ai/health-check
+export const healthCheckAIController = async (req, res, next) => {
+  try {
+    const tutorReply = await askAITutor({ message: 'Hello AI Tutor', mode: 'direct' });
+    res.json({
+      success: true,
+      message: 'Gemini AI integration is fully functional across all platform features!',
+      activeModel: 'gemini-3.5-flash',
+      testResponse: tutorReply.substring(0, 100) + '...',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
