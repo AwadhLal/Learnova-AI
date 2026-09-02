@@ -15,16 +15,13 @@ const getAIClient = () => {
   return null;
 };
 
-const PRIMARY_MODEL = 'gemini-2.5-flash';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const PRIMARY_MODEL = 'gemini-3.6-flash';
 
 /**
  * Centralized Gemini Content Generator
  * Stripped of uncontrolled fallbacks to ensure strict adherence to gemini-2.5-flash
- * Includes exponential backoff for temporary 503 errors.
  */
-const generateContentStrict = async (prompt, retries = 2) => {
+const generateContentStrict = async (prompt) => {
   const apiKey = getAPIKey();
   const genAI = getAIClient();
   if (!genAI || !apiKey) {
@@ -33,27 +30,16 @@ const generateContentStrict = async (prompt, retries = 2) => {
 
   const modelName = process.env.GEMINI_MODEL?.trim() || PRIMARY_MODEL;
 
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
-    try {
-      const response = await genAI.models.generateContent({
-        model: modelName,
-        contents: prompt
-      });
-      return { result: response, modelName };
-    } catch (err) {
-      const safeError = err.message || err.toString();
-      const isUnavailable = safeError.includes('503') || safeError.toLowerCase().includes('unavailable') || safeError.toLowerCase().includes('high demand');
-      
-      if (isUnavailable && attempt <= retries) {
-        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s
-        console.warn(`⚠️ [Gemini AI] Model "${modelName}" temporarily unavailable (503). Retrying in ${waitTime/1000}s... (Attempt ${attempt} of ${retries})`);
-        await delay(waitTime);
-        continue;
-      }
-
-      console.error(`⚠️ [Gemini AI] Model "${modelName}" failed. HTTP Status/Error:`, safeError.substring(0, 200));
-      throw new Error(`Gemini AI Error with ${modelName}: ${safeError}`);
-    }
+  try {
+    const response = await genAI.models.generateContent({
+      model: modelName,
+      contents: prompt
+    });
+    return { result: response, modelName };
+  } catch (err) {
+    const safeError = err.message || err.toString();
+    console.error(`⚠️ [Gemini AI] Model "${modelName}" failed. HTTP Status/Error:`, safeError.substring(0, 200));
+    throw new Error(`Gemini AI Error with ${modelName}: ${safeError}`);
   }
 };
 
