@@ -15,7 +15,7 @@ const getAIClient = () => {
   return null;
 };
 
-const PRIMARY_MODEL = 'gemini-2.5-flash';
+const PRIMARY_MODEL = 'gemini-3.6-flash';
 
 /**
  * Centralized Gemini Content Generator
