@@ -9,10 +9,13 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('learnova_theme', theme);
+    const root = document.documentElement;
     if (theme === 'light') {
-      document.documentElement.classList.add('light');
+      root.classList.add('light');
+      root.classList.remove('dark');
     } else {
-      document.documentElement.classList.remove('light');
+      root.classList.add('dark');
+      root.classList.remove('light');
     }
   }, [theme]);
 

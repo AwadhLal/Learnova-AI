@@ -128,7 +128,15 @@ export const createCourse = async (req, res, next) => {
 
     let thumbnailUrl = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80';
     if (req.file) {
-      thumbnailUrl = await uploadToCloudinary(req.file.buffer, 'courses');
+      try {
+        thumbnailUrl = await uploadToCloudinary(req.file.buffer, 'courses');
+      } catch (err) {
+        console.error('Cloudinary thumbnail upload error:', err.message || err);
+        return res.status(400).json({
+          success: false,
+          message: `Thumbnail image upload failed: ${err.message || 'Cloudinary authorization error (403 Forbidden)'}`
+        });
+      }
     }
 
     const course = await Course.create({
@@ -171,7 +179,15 @@ export const updateCourse = async (req, res, next) => {
 
     const updateFields = { ...req.body };
     if (req.file) {
-      updateFields.thumbnail = await uploadToCloudinary(req.file.buffer, 'courses');
+      try {
+        updateFields.thumbnail = await uploadToCloudinary(req.file.buffer, 'courses');
+      } catch (err) {
+        console.error('Cloudinary thumbnail update error:', err.message || err);
+        return res.status(400).json({
+          success: false,
+          message: `Thumbnail image upload failed: ${err.message || 'Cloudinary authorization error (403 Forbidden)'}`
+        });
+      }
     }
 
     if (updateFields.learningObjectives && typeof updateFields.learningObjectives === 'string') {

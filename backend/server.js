@@ -1,10 +1,11 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import connectDB from './config/db.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
+import { testCloudinaryConnection } from './services/cloudinaryService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
@@ -18,10 +19,11 @@ import adminRoutes from './routes/adminRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 
-dotenv.config();
-
 // Connect to MongoDB
 connectDB();
+
+// Run safe Cloudinary diagnostic ping on boot
+testCloudinaryConnection();
 
 const app = express();
 
