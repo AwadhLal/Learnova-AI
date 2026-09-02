@@ -386,8 +386,9 @@ const AdminCurriculumManager = () => {
               {lesType === 'video' && (
                 <div className="space-y-3 p-3 border border-slate-800 rounded-xl bg-slate-950/50">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Video Source URL (YouTube/Vimeo)</label>
-                    <input type="text" value={lesVideoUrl} onChange={e => setLesVideoUrl(e.target.value)} placeholder="https://youtube.com/..." className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white outline-none focus:border-indigo-500" />
+                    <label className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Video Source URL (YouTube / Vimeo)</label>
+                    <input type="text" value={lesVideoUrl} onChange={e => setLesVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2 text-xs text-white outline-none focus:border-indigo-500" />
+                    <p className="text-[9px] text-slate-500">Paste standard YouTube, youtu.be, Shorts, or Vimeo URLs. They will be automatically embedded.</p>
                   </div>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center" aria-hidden="true">
