@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Central API Key resolution (supports both GEMINI_API_KEY and AI_API_KEY)
+// Central API Key resolution
 const getAPIKey = () => {
-  const key = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   return key && key.trim() !== '' ? key.trim() : null;
 };
 
@@ -15,101 +15,30 @@ const getAIClient = () => {
   return null;
 };
 
-let cachedWorkingModel = null;
-
-// Preferred text models
-const PRIORITY_TEXT_MODELS = [
-  'gemini-2.5-flash'
-];
+const PRIMARY_MODEL = 'gemini-2.5-flash';
 
 /**
- * Discovers available text generation models for the API key from Google AI ModelService
+ * Centralized Gemini Content Generator
+ * Stripped of uncontrolled fallbacks to ensure strict adherence to gemini-2.5-flash
  */
-const discoverAvailableModels = async () => {
-  const apiKey = getAPIKey();
-  if (!apiKey) return [];
-
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const data = await res.json();
-
-    if (data.models && Array.isArray(data.models)) {
-      const validTextModels = data.models
-        .filter(m => {
-          const name = m.name.toLowerCase();
-          const methods = m.supportedGenerationMethods || [];
-          return methods.includes('generateContent') &&
-            !name.includes('-tts') &&
-            !name.includes('-image') &&
-            !name.includes('-transcribe') &&
-            !name.includes('-clip') &&
-            !name.includes('robotics');
-        })
-        .map(m => m.name.replace('models/', ''));
-
-      return validTextModels;
-    } else if (data.error) {
-      console.error('❌ Google AI Model Discovery Error:', data.error.message);
-    }
-  } catch (err) {
-    console.warn('[Gemini AI] Model discovery warning:', err.message);
-  }
-  return [];
-};
-
-/**
- * Centralized Gemini Content Generator with Dynamic Model Selection & Fallback
- */
-const generateContentWithFallback = async (prompt) => {
+const generateContentStrict = async (prompt) => {
   const apiKey = getAPIKey();
   const genAI = getAIClient();
   if (!genAI || !apiKey) {
-    throw new Error('Gemini API Key is not configured. Please set GEMINI_API_KEY or AI_API_KEY in backend/.env file.');
+    throw new Error('Gemini API Key is not configured. Please set GEMINI_API_KEY in backend/.env file.');
   }
 
-  // Use cached model if available
-  if (cachedWorkingModel) {
-    try {
-      const model = genAI.getGenerativeModel({ model: cachedWorkingModel });
-      const result = await model.generateContent(prompt);
-      return { result, modelName: cachedWorkingModel };
-    } catch (err) {
-      console.warn(`[Gemini AI] Cached model "${cachedWorkingModel}" failed, re-selecting model...`);
-      cachedWorkingModel = null;
-    }
+  const modelName = process.env.GEMINI_MODEL?.trim() || PRIMARY_MODEL;
+
+  try {
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const result = await model.generateContent(prompt);
+    return { result, modelName };
+  } catch (err) {
+    const safeError = err.message || err.toString();
+    console.error(`⚠️ [Gemini AI] Model "${modelName}" failed. HTTP Status/Error:`, safeError.substring(0, 200));
+    throw new Error(`Gemini AI Error with ${modelName}: ${safeError}`);
   }
-
-  const customModel = process.env.GEMINI_MODEL?.trim();
-  const discoveredModels = await discoverAvailableModels();
-
-  const candidateModels = Array.from(new Set([
-    ...(customModel ? [customModel] : []),
-    ...PRIORITY_TEXT_MODELS,
-    ...discoveredModels
-  ]));
-
-  let lastError = null;
-
-  for (const modelName of candidateModels) {
-    try {
-      console.log(`🤖 [Gemini AI] Trying model candidate: "${modelName}"...`);
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      cachedWorkingModel = modelName;
-      console.log(`🎉 ✅ [Gemini AI] Successfully generated content using model: "${modelName}"`);
-      return { result, modelName };
-    } catch (err) {
-      lastError = err;
-      const msg = err.message || '';
-      console.warn(`⚠️ [Gemini AI] Model "${modelName}" rejected request: ${msg.substring(0, 120)}`);
-      if (msg.includes('404') || msg.includes('not found') || msg.includes('modality') || msg.includes('400')) {
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw lastError || new Error('All candidate Gemini models failed to generate content');
 };
 
 /**
@@ -117,19 +46,19 @@ const generateContentWithFallback = async (prompt) => {
  */
 export const testGeminiConnection = async () => {
   const apiKey = getAPIKey();
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const primaryModel = process.env.GEMINI_MODEL || PRIMARY_MODEL;
 
   console.log('🤖 Gemini AI Environment Status:');
   console.log(`- Gemini API key configured: ${apiKey ? 'YES' : 'NO'}`);
   console.log(`- Preferred model: ${primaryModel}`);
 
   if (!apiKey) {
-    console.warn('⚠️  Gemini AI Notice: GEMINI_API_KEY / AI_API_KEY is not set in backend/.env');
+    console.warn('⚠️  Gemini AI Notice: GEMINI_API_KEY is not set in backend/.env');
     return { success: false, configured: false };
   }
 
   try {
-    const { result, modelName } = await generateContentWithFallback('Respond with only the single word "ONLINE" to confirm API connectivity.');
+    const { result, modelName } = await generateContentStrict('Respond with only the single word "ONLINE" to confirm API connectivity.');
     const responseText = (await result.response.text()).trim();
     console.log(`🎉 ✅ Gemini AI Connected Successfully! Active Working Model: "${modelName}" | Status: "${responseText}"`);
     return { success: true, modelName, response: responseText };
@@ -165,7 +94,7 @@ Instruction Mode: ${mode}
   const prompt = `${systemPrompt}\n\nUser Question: ${message}`;
   
   try {
-    const { result } = await generateContentWithFallback(prompt);
+    const { result } = await generateContentStrict(prompt);
     const response = await result.response;
     return response.text();
   } catch (err) {
@@ -197,7 +126,7 @@ Return ONLY valid JSON array with this exact structure:
 ]`;
 
   try {
-    const { result } = await generateContentWithFallback(prompt);
+    const { result } = await generateContentStrict(prompt);
     const responseText = await result.response.text();
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
@@ -217,7 +146,7 @@ export const generateAIStudyPlan = async ({ goal, examDate, availableHoursPerDay
 Return ONLY valid JSON array of objects: [{ "day": 1, "title": "...", "tasks": [{ "time": "30 mins", "task": "...", "type": "theory", "completed": false }] }]`;
 
   try {
-    const { result } = await generateContentWithFallback(prompt);
+    const { result } = await generateContentStrict(prompt);
     const responseText = await result.response.text();
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
@@ -237,7 +166,7 @@ export const summarizeLesson = async ({ title, content }) => {
 Return ONLY valid JSON object: { "summary": "...", "keyPoints": ["..."], "flashcards": [{ "front": "...", "back": "..." }] }`;
 
   try {
-    const { result } = await generateContentWithFallback(prompt);
+    const { result } = await generateContentStrict(prompt);
     const responseText = await result.response.text();
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
@@ -257,7 +186,7 @@ export const generateCourseContent = async ({ title, category, level }) => {
 Return ONLY valid JSON object: { "description": "...", "learningObjectives": ["..."], "requirements": ["..."], "tags": ["..."] }`;
 
   try {
-    const { result } = await generateContentWithFallback(prompt);
+    const { result } = await generateContentStrict(prompt);
     const responseText = await result.response.text();
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
