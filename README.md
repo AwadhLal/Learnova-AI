@@ -9,17 +9,18 @@
 ### 🎓 1. Student Portal
 * **Interactive Dashboard**: Track course progress percentages, completed lessons, upcoming assignments, and personalized AI learning recommendations.
 * **Course Catalog**: Filterable course directory with category tags, skill levels (Beginner, Intermediate, Advanced), price sorting, and dynamic search.
-* **3-Pane Learning Player**: Modern course consumption interface featuring a Curriculum Navigation Tree, Lesson Reader/Video Player, Personal Notes Manager, and an AI Tutor Assistant.
-* **Contextual AI Tutor**: Real-time Gemini AI assistance tailored to the current course and lesson. Supports 4 instruction modes:
+* **3-Pane Learning Player**: Modern course consumption interface featuring a Curriculum Navigation Tree, Lesson Reader/Video Player, Personal Notes Manager, and an AI Tutor Assistant. Fully supports embedded YouTube and Vimeo videos natively, as well as direct Cloudinary video streaming.
+* **Contextual AI Tutor**: Real-time Gemini AI assistance (powered by `gemini-3.6-flash`) tailored to the current course and lesson. Supports 4 instruction modes:
   * `Direct`: Comprehensive explanations with step-by-step breakdowns.
   * `Hints`: Socratic guidance and conceptual hints without revealing final answers.
   * `Hinglish`: Explanations in natural Roman Hinglish with relatable analogies.
   * `Summary`: Bulleted key takeaways and flashcard summaries.
 * **Module Quizzes & Assessments**: Interactive multiple-choice quizzes with dynamic score calculation, weak topic identification, and persisted progress tracking.
-* **Secure Auth & Account Recovery**: JWT authentication, protected routes, and self-service password reset requesting.
+* **Secure Auth & Email Verification**: JWT authentication, protected routes, automated OTP email verification upon sign up, and self-service password reset requesting.
 
 ### 🛡️ 2. Admin Panel
 * **Real MongoDB Analytics**: Real-time metric cards (Total Revenue, Active Students, Enrollment Counts, Completion Rates, Average Quiz Scores) and dynamic monthly growth charts powered by MongoDB aggregations.
+* **LMS Curriculum Builder**: Drag-and-drop style complete Curriculum Manager to build modules and lessons (Video, PDF, Text). Integrates direct Cloudinary video uploads and automatic embed URL parsing for standard YouTube and Vimeo links.
 * **Course Management System**: Full CRUD suite to author courses, design curriculum modules, write text/video lessons, create quizzes, and upload thumbnails via Cloudinary.
 * **Student Manager**: Search student accounts, inspect enrollment counts, and activate/deactivate student access. Deactivated accounts are automatically blocked by backend authorization middleware.
 * **Financial Payment Audit**: Transaction log table tracking Razorpay Order IDs, Payment IDs, timestamps, student names, and payment statuses.
@@ -31,7 +32,7 @@
 * **Frontend**: React 18, Vite, Tailwind CSS (Glassmorphism design system), Lucide Icons, Chart.js, Axios.
 * **Backend**: Node.js, Express.js, Mongoose (MongoDB ORM), JSON Web Tokens (`jsonwebtoken`), `bcryptjs`, `multer`, `helmet`, `cors`, `express-rate-limit`.
 * **Services & Integrations**:
-  * **AI Service**: Google Gemini AI (`@google/generative-ai`)
+  * **AI Service**: Google Gemini AI (`@google/genai` utilizing `gemini-3.6-flash`)
   * **Payments**: Razorpay Gateway SDK
   * **Media Storage**: Cloudinary SDK (`multer` memory storage)
   * **Transactional Emails**: Nodemailer (SMTP)
@@ -73,7 +74,7 @@ Learnova AI/
 * **MongoDB**: Local MongoDB instance or MongoDB Atlas cluster URI
 * **Razorpay Test Account**: Key ID & Key Secret
 * **Cloudinary Account**: Cloud Name, API Key, API Secret
-* **Google Gemini API Key**: `AI_API_KEY`
+* **Google Gemini API Key**: `GEMINI_API_KEY`
 
 ---
 
@@ -112,7 +113,7 @@ RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
 # Google Gemini AI
-AI_API_KEY=your_gemini_api_key
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 Start the backend server:
