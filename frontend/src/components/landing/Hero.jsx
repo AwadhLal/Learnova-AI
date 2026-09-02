@@ -74,7 +74,6 @@ const Hero = () => {
             transition={{ delay: 0.4 }}
             className="flex flex-wrap items-center justify-center gap-6 pt-6 text-xs text-slate-400 font-medium"
           >
-            <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-400" /> Free Demo Account</span>
             <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-indigo-400" /> 24/7 Contextual AI Tutor</span>
             <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-purple-400" /> Verified Certificates</span>
             <span className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-amber-400" /> Razorpay Test Payments</span>
